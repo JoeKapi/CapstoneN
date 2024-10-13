@@ -1,0 +1,9 @@
+# Ignorar archivos de compilación
+bin/
+obj/
+*.user
+*.suo
+*.log
+# Ignore Visual Studio temporary files, build results, and
+# User-specific files
+.vs/
