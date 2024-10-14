@@ -5,7 +5,7 @@ namespace ChatClient.Domain.Entities
 {
     public class User : IEntity
     {
-        public Guid Id { get; set; }  // ID único para cada usuario
+        public Guid Id { get; set; } 
         public string Username { get; set; }
         public string Password { get; set; }
 

@@ -27,7 +27,6 @@ namespace ChatClient.Application.Services
 
         public void Register(User user)
         {
-            // Verificar si el usuario ya existe por su nombre de usuario
             var existingUser = _userRepository.GetAll().FirstOrDefault(u => u.Username == user.Username);
 
             if (existingUser != null)
