@@ -14,16 +14,14 @@ namespace ChatClient.Application.Services
 
         public User Authenticate(string username, string password)
         {
-            // Buscar el usuario por nombre de usuario
             var user = _userRepository.GetAll().FirstOrDefault(u => u.Username == username);
 
-            // Verificar si la contraseña coincide
             if (user == null || user.Password != password)
             {
-                return null; // Retornar null si no se puede autenticar
+                return null;
             }
 
-            return user; // Retornar el usuario si la autenticación es exitosa
+            return user;
         }
 
 
@@ -34,11 +32,8 @@ namespace ChatClient.Application.Services
 
             if (existingUser != null)
             {
-                // Si el nombre de usuario ya está en uso, lanza una excepción o retorna un mensaje de error
                 throw new Exception("El nombre de usuario ya está en uso.");
             }
-
-            // Si no existe, proceder con la adición del nuevo usuario
             _userRepository.Add(user);
         }
 
