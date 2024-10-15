@@ -105,7 +105,7 @@ namespace ChatClient.Application
             bool autenticado = _authService.Login(username, password);
             if (autenticado)
             {
-                _currentUser = _authService.GetCurrentUser();
+                _currentUser = _authService.GetCurrentUser(); // Almacenar el usuario autenticado
                 Console.WriteLine($"Bienvenido {username}.");
                 return true;
             }
@@ -141,7 +141,7 @@ namespace ChatClient.Application
             if (_roomService.CreateRoom(roomName))
             {
                 Console.WriteLine($"Sala creada: {roomName}");
-                _roomService.JoinRoom(roomName);
+                _roomService.JoinRoom(roomName, _currentUser.Username); // Pasar el currentUser
                 Console.WriteLine($"Te has unido a la sala: {roomName}");
                 IniciarChat(roomName);
             }
@@ -172,7 +172,7 @@ namespace ChatClient.Application
         {
             Console.WriteLine("Ingresa el nombre de la sala a la que deseas unirte:");
             string roomName = Console.ReadLine();
-            if (_roomService.JoinRoom(roomName))
+            if (_roomService.JoinRoom(roomName, _currentUser.Username)) // Pasar el currentUser
             {
                 Console.WriteLine($"Te has unido a la sala: {roomName}");
                 IniciarChat(roomName);
@@ -212,7 +212,7 @@ namespace ChatClient.Application
                     break;
                 }
 
-                _roomService.SendMessageToRoomV1(roomName, inputMessage, _currentUser.Username);
+                _roomService.SendMessageToRoomV1(roomName, inputMessage, _currentUser.Username); // Enviar mensaje con el currentUser
             }
         }
     }
