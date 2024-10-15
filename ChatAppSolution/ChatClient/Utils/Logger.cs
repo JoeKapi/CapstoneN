@@ -1,33 +1,27 @@
 ﻿public class Logger
 {
-    private readonly string _logDirectory;
-
-    public Logger(string logDirectory = "logs")
+    private void EnsureLogDirectoryExists(string roomName)
     {
-        _logDirectory = logDirectory;
-        EnsureLogDirectoryExists();
-    }
-
-    // Verificar y crear la carpeta de logs si no existe
-    private void EnsureLogDirectoryExists()
-    {
-        if (!Directory.Exists(_logDirectory))
+        string logDirectory = $"logs/{roomName}";
+        if (!Directory.Exists(logDirectory))
         {
-            Directory.CreateDirectory(_logDirectory);
+            Directory.CreateDirectory(logDirectory);
         }
     }
 
-    // Guardar mensajes serializados en JSON
+    // Guardar el mensaje en formato JSON
     public void LogJson(string roomName, string jsonMessage)
     {
-        string filePath = Path.Combine(_logDirectory, $"{roomName}.json");
+        EnsureLogDirectoryExists(roomName);
+        string filePath = $"logs/{roomName}/{roomName}.json";
         File.AppendAllText(filePath, jsonMessage + Environment.NewLine);
     }
 
-    // Guardar mensajes serializados en MessagePack
+    // Guardar el mensaje en formato MessagePack
     public void LogMessagePack(string roomName, byte[] messagePackData)
     {
-        string filePath = Path.Combine(_logDirectory, $"{roomName}.msgpack");
+        EnsureLogDirectoryExists(roomName);
+        string filePath = $"logs/{roomName}/{roomName}.msgpack";
         using (var fileStream = new FileStream(filePath, FileMode.Append))
         {
             fileStream.Write(messagePackData, 0, messagePackData.Length);
