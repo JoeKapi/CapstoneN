@@ -6,6 +6,7 @@ using uPLibrary.Networking.M2Mqtt.Messages;
 using ChatClient.Domain.Entities;
 using ChatClient.Infrastructure.Repositories;
 using ChatClient.Utils;
+using System.Security.Cryptography;
 
 namespace ChatClient.Application.Services
 {
@@ -116,51 +117,88 @@ namespace ChatClient.Application.Services
             }
         }
 
-        // Enviar un mensaje a la sala
+        // Enviar un mensaje a la sala (versión 1 - JSON)
         public void SendMessageToRoomV1(string roomName, string content, string sender)
         {
             string topic = $"/v1/room/{roomName}/messages";
-            var message = new Message(roomName, EncryptionHelper.Encrypt(content), sender);
+            var message = new Message(roomName, content, sender);  
 
             string jsonMessage = MessageSerializer.SerializeToJson(message);
 
             _mqttClient.Publish(topic, Encoding.UTF8.GetBytes(jsonMessage), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
-
-            _logger.LogJson(roomName, jsonMessage);
-
             _messageRepository.SaveMessage(message);
         }
 
-
+        // Enviar un mensaje a la sala (versión 2 - MessagePack)
         public void SendMessageToRoomV2(string roomName, string content, string sender)
         {
             string topic = $"/v2/room/{roomName}/messages";
-            var message = new Message(roomName, EncryptionHelper.Encrypt(content), sender);
+            var message = new Message(roomName, content, sender);  
 
             byte[] messagePackData = MessageSerializer.SerializeToMessagePack(message);
 
             _mqttClient.Publish(topic, messagePackData, MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
-
-            _logger.LogMessagePack(roomName, messagePackData);
-
             _messageRepository.SaveMessage(message);
         }
-
 
         // Manejar la recepción de mensajes
         public void ReceiveMessages(string roomName, string currentUser)
         {
             _mqttClient.MqttMsgPublishReceived += (sender, e) =>
             {
-                string jsonMessage = Encoding.UTF8.GetString(e.Message);
-                var message = MessageSerializer.DeserializeFromJson(jsonMessage);
-
-                if (message.Sender != currentUser)
+                if (e.Topic.StartsWith("/v1/"))
                 {
-                    string decryptedContent = EncryptionHelper.Decrypt(message.Content); 
-                    Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {decryptedContent}");
+                    string jsonMessage = Encoding.UTF8.GetString(e.Message);
+                    var message = MessageSerializer.DeserializeFromJson(jsonMessage);
+
+                    if (VerifyMessageIntegrity(message))
+                    {
+                        if (message.Sender != currentUser)
+                        {
+                            Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {message.Content}");
+                            File.AppendAllText($"logs/{roomName}.json", jsonMessage + Environment.NewLine);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("¡Advertencia! El mensaje recibido ha sido alterado.");
+                    }
+                }
+                else if (e.Topic.StartsWith("/v2/"))
+                {
+                    var message = MessageSerializer.DeserializeFromMessagePack(e.Message);
+
+                    if (VerifyMessageIntegrity(message))
+                    {
+                        if (message.Sender != currentUser)
+                        {
+                            Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {message.Content}");
+                            File.WriteAllBytes($"logs/{roomName}.msgpack", e.Message);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("¡Advertencia! El mensaje recibido ha sido alterado.");
+                    }
                 }
             };
         }
+
+        private bool VerifyMessageIntegrity(Message message)
+        {
+            // Recalcular el hash del contenido y compararlo con el hash recibido
+            string recalculatedHash = GenerateHash(message.Content);
+            return message.Hash == recalculatedHash;
+        }
+
+        private string GenerateHash(string content)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+            }
+        }
+
     }
 }
