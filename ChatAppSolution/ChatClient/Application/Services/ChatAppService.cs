@@ -6,14 +6,14 @@ namespace ChatClient.Application
     {
         private readonly CommandService _commandService;
 
-        public ChatAppService(AuthService authService, RoomService roomService)
+        public ChatAppService(AuthService authService, RoomService roomService, UserRegistryService userRegistryService)
         {
-            _commandService = new CommandService(roomService, authService);
+            _commandService = new CommandService(roomService, authService); 
         }
 
         public void Run()
         {
-            _commandService.Run(); 
+            _commandService.Run();
         }
     }
 }

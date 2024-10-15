@@ -20,14 +20,15 @@ namespace ChatClient
             var userRepository = new MongoUserRepository(mongoDbContext);       // Repositorio de usuarios
 
             // Inicializar servicios de aplicación
-            var authService = new AuthService(userRepository);
-            var roomService = new RoomService(mqttClient, messageRepository, roomRepository);  
+            var userRegistryService = new UserRegistryService(userRepository);
+            var authService = new AuthService(userRepository, userRegistryService);
+            var roomService = new RoomService(mqttClient, messageRepository, roomRepository);
 
             // Conectar al broker MQTT
             mqttClient.Connect(Guid.NewGuid().ToString());
 
             // Crear y ejecutar el servicio principal de chat
-            var chatAppService = new ChatAppService(authService, roomService);
+            var chatAppService = new ChatAppService(authService, roomService, userRegistryService);  // Pasar userRegistryService también
             chatAppService.Run();
         }
     }
