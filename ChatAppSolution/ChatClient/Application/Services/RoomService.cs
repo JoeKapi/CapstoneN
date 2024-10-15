@@ -120,17 +120,11 @@ namespace ChatClient.Application.Services
         public void SendMessageToRoomV1(string roomName, string content, string sender)
         {
             string topic = $"/v1/room/{roomName}/messages";
-            var message = new Message(roomName, content, sender);
+            var message = new Message(roomName, EncryptionHelper.Encrypt(content), sender); 
 
             string jsonMessage = MessageSerializer.SerializeToJson(message);
 
-            // Publicar el mensaje en MQTT
             _mqttClient.Publish(topic, Encoding.UTF8.GetBytes(jsonMessage), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
-
-            // Guardar el mensaje en el log
-            _logger.LogJson(roomName, jsonMessage);
-
-            // Guardar el mensaje en MongoDB
             _messageRepository.SaveMessage(message);
         }
 
@@ -156,30 +150,13 @@ namespace ChatClient.Application.Services
         {
             _mqttClient.MqttMsgPublishReceived += (sender, e) =>
             {
-                if (e.Topic.StartsWith("/v1/"))
+                string jsonMessage = Encoding.UTF8.GetString(e.Message);
+                var message = MessageSerializer.DeserializeFromJson(jsonMessage);
+
+                if (message.Sender != currentUser)
                 {
-                    string jsonMessage = Encoding.UTF8.GetString(e.Message);
-                    var message = MessageSerializer.DeserializeFromJson(jsonMessage);
-
-                    if (message.Sender != currentUser)
-                    {
-                        Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {message.Content}");
-
-                        // Guardar en el log
-                        _logger.LogJson(roomName, jsonMessage);
-                    }
-                }
-                else if (e.Topic.StartsWith("/v2/"))
-                {
-                    var message = MessageSerializer.DeserializeFromMessagePack(e.Message);
-
-                    if (message.Sender != currentUser)
-                    {
-                        Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {message.Content}");
-
-                        // Guardar en el log
-                        _logger.LogMessagePack(roomName, e.Message);
-                    }
+                    string decryptedContent = EncryptionHelper.Decrypt(message.Content); // Descifrar el contenido
+                    Console.WriteLine($"Mensaje recibido en {e.Topic}: {message.Sender}: {decryptedContent}");
                 }
             };
         }
